@@ -1,0 +1,38 @@
+#Connect to Microsoft Graph 
+Connect-MgGraph -Scopes ("User.ReadBasic.All Application.ReadWrite.All " `
+                        + "DelegatedPermissionGrant.ReadWrite.All " `
+                        + "AppRoleAssignment.ReadWrite.All")
+
+#Define settings                        
+$clientAppId = "14d82eec-204b-4c2f-b7e8-296a70dab67e" # Microsoft Graph Command Line
+$resourceAppId = "00000003-0000-0000-c000-000000000000" # Microsoft Graph API
+$permissions = @("DeviceManagementConfiguration.ReadWrite.All") #Claim value of the permissions
+$userUpnOrId = “<UPNorID>” #User which will get the permissions
+
+# Retrieve the properties and relationships of a service principal
+$clientSp = Get-MgServicePrincipal -Filter "appId eq '$($clientAppId)'"
+
+# Get User properties
+$user = Get-MgUser -UserId $userUpnOrId
+
+# Get all delegated permissions for the service principal of a specific user or All permissions
+$SPSingle = Get-MgOauth2PermissionGrant -All| Where-Object { ($_.clientId -eq $clientsp.Id) -and ($_.PrincipalId -eq $user.id) }
+$SPAll = Get-MgServicePrincipalOauth2PermissionGrant -ServicePrincipalId $clientSp.id -All
+
+# Remove delegated permissions for a specific user
+Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId $SPSingle.Id
+
+# Remove all delegeated permissions for all users
+$SPAll | Where-Object { $_.ConsentType -eq "Principal" } | ForEach-Object {
+  Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId $_.Id
+}
+
+# Remove all delegated permissions for all users and admin consent
+$SPAll |ForEach-Object {
+  Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId $_.Id
+}
+
+# Remove admin consent
+$SPAll | Where-Object { $_.ConsentType -eq "AllPrincipals" } | ForEach-Object {
+  Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId $_.Id
+}
